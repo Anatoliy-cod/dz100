@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>URL Statistics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #e9ecef;
+        }
+        .stat-card {
+            max-width: 800px;
+            margin-top: 3rem;
+            border-radius: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container d-flex justify-content-center">
+    <div class="card stat-card shadow-sm w-100">
+        <div class="card-body p-4">
+            <h3 class="text-center mb-4">URL Statistics</h3>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Original URL</th>
+                        <th>Clicks</th>
+                        <th>Last Access</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="statTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-secondary">Back to Shortener</a>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    async function loadStatistics() {
+        const tbody = document.getElementById('statTableBody');
+        try {
+            const resp = await fetch('/stat');
+            if (!resp.ok) throw new Error(`Error ${resp.status}`);
+            const stats = await resp.json();
+            tbody.innerHTML = '';
+            if (stats.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No URLs found in the database.</td></tr>';
+                return;
+            }
+            stats.forEach(stat => {
+                const dateStr = stat.lastAccess ? new Date(stat.lastAccess).toLocaleString() : 'Never';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${stat.id}</td>
+                    <td class="text-truncate" style="max-width: 300px;" title="${stat.url}">
+                        <a href="${stat.url}" target="_blank">${stat.url}</a>
+                    </td>
+                    <td><span class="badge bg-primary rounded-pill">${stat.count}</span></td>
+                    <td>${dateStr}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteUrl(${stat.id})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">${err.message}</td></tr>`;
+        }
+    }
+    async function deleteUrl(id) {
+        if (!confirm('Are you sure?')) return;
+        try {
+            const resp = await fetch(`/my/${id}`, {
+                method: 'DELETE'
+            });
+            if (!resp.ok) throw new Error(`Failed to delete: ${resp.status}`);
+            loadStatistics();
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+    loadStatistics();
+</script>
+</body>
+</html>
